@@ -72,20 +72,7 @@ func main() {
 	}
 	defer handle.Close()
 
-	gocleanup.Register(func() {
-		fmt.Printf("------------------- Summary Stats ------------------- \n")
-		for _, node := range nodes {
-			if node.incount != 0 && node.outcount != 0 {
-				fmt.Printf("%-16s   %-30s    %-4.1fk    %-4.1fk\n",
-					node.addr,
-					node.hostname,
-					float64(node.incount)/1000,
-					float64(node.outcount)/1000)
-
-			}
-		}
-
-	})
+	gocleanup.Register(printStats)
 
 	for x := 0; x < numhosts; x++ {
 		if x == 0 {
@@ -115,6 +102,16 @@ func main() {
 		text, _ := reader.ReadString('\n')
 		fmt.Println(text)
 	}
+
+	ticker := time.NewTicker(time.Minute)
+	go func() {
+		for t := range ticker.C {
+			fmt.Println("Time:", t)
+			printStats()
+			clearStats()
+		}
+	}()
+
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 	for packet := range packetSource.Packets() {
 		//printPacketInfo(packet)
@@ -148,66 +145,22 @@ func analyzePacket(packet gopacket.Packet) {
 	}
 }
 
-func printPacketInfo(packet gopacket.Packet) {
-	// Let's see if the packet is an ethernet packet    ethernetLayer := packet.Layer(layers.LayerTypeEthernet)
-	ethernetLayer := packet.Layer(layers.LayerTypeEthernet)
-	if ethernetLayer != nil {
-		//		fmt.Println("Ethernet layer detected.")
-		ethernetPacket, _ := ethernetLayer.(*layers.Ethernet)
-		fmt.Println("Source MAC: ", ethernetPacket.SrcMAC)
-		fmt.Println("Destination MAC: ", ethernetPacket.DstMAC)
-		// Ethernet type is typically IPv4 but could be ARP or other
-		//		fmt.Println("Ethernet type: ", ethernetPacket.EthernetType)
-		//		fmt.Println()
+func printStats() {
+	fmt.Printf("------------------- Summary Stats ------------------- \n")
+	for _, node := range nodes {
+		if node.incount != 0 && node.outcount != 0 {
+			fmt.Printf("%-16s   %-30s    %-10.1fk    %-10.1fk\n",
+				node.addr,
+				node.hostname,
+				float64(node.incount)/1000,
+				float64(node.outcount)/1000)
+		}
 	}
+}
 
-	// Let's see if the packet is IP (even though the ether type told us)
-	ipLayer := packet.Layer(layers.LayerTypeIPv4)
-	if ipLayer != nil {
-		//		fmt.Println("IPv4 layer detected.")
-		ip, _ := ipLayer.(*layers.IPv4)
-
-		// IP layer variables:
-		// Version (Either 4 or 6)
-		// IHL (IP Header Length in 32-bit words)
-		// TOS, Length, Id, Flags, FragOffset, TTL, Protocol (TCP?),
-		// Checksum, SrcIP, DstIP
-
-		fmt.Printf("From %s to %s - len %d\n", ip.SrcIP, ip.DstIP, ip.Length)
-		//		fmt.Println("Protocol: ", ip.Protocol)
-		//		fmt.Println()
-
-	}
-
-	// Let's see if the packet is TCP    tcpLayer := packet.Layer(layers.LayerTypeTCP)
-	tcpLayer := packet.Layer(layers.LayerTypeTCP)
-	if tcpLayer != nil {
-		//		fmt.Println("TCP layer detected.")
-		tcp, _ := tcpLayer.(*layers.TCP)
-
-		// TCP layer variables:
-		// SrcPort, DstPort, Seq, Ack, DataOffset, Window, Checksum, Urgent
-		// Bool flags: FIN, SYN, RST, PSH, ACK, URG, ECE, CWR, NS
-		fmt.Printf("From port %d to %d\n", tcp.SrcPort, tcp.DstPort)
-		//		fmt.Println("Sequence number: ", tcp.Seq)
-		//		fmt.Println()
-	}
-	fmt.Println()
-
-	// When iterating through packet.Layers() above,
-	// if it lists Payload layer then that is the same as
-	// this applicationLayer. applicationLayer contains the Payload    applicationLayer := packet.ApplicationLayer()
-	//	applicationLayer := packet.ApplicationLayer()
-	//	if applicationLayer != nil {
-	//		fmt.Println("Application layer/Payload found.")
-	//		fmt.Printf("%s\n", applicationLayer.Payload())
-
-	// Search for a string inside the Payload        if strings.Contains(string(applicationLayer.Payload()), "HTTP") {
-	//		fmt.Println("HTTP found!")
-	//	}
-
-	// Check for errors
-	if err := packet.ErrorLayer(); err != nil {
-		fmt.Println("Error decoding some part of the packet:", err)
+func clearStats() {
+	for i, _ := range nodes {
+		nodes[i].incount = 0
+		nodes[i].outcount = 0
 	}
 }
