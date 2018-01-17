@@ -36,7 +36,7 @@ var (
 	timeout     time.Duration = 30 * time.Second
 	handle      *pcap.Handle
 	nodes       []node
-	debug       bool = true
+	debug       bool = false
 )
 
 func main() {
@@ -57,11 +57,12 @@ func main() {
 		numhosts = int(math.Pow(2, float64(32-masklen)))
 		baseaddr = strings.TrimSuffix(ipv4Addr.String(), ".0")
 
-		fmt.Println(ipv4Addr)
-		fmt.Println(ipv4Net)
-		fmt.Println(numhosts)
-		fmt.Println(baseaddr)
-		//		os.Exit(3)
+		if debug {
+			fmt.Println(ipv4Addr)
+			fmt.Println(ipv4Net)
+			fmt.Println(numhosts)
+			fmt.Println(baseaddr)
+		}
 	}
 
 	// Open device
@@ -70,11 +71,17 @@ func main() {
 		log.Fatal(err)
 	}
 	defer handle.Close()
+
 	gocleanup.Register(func() {
 		fmt.Printf("------------------- Summary Stats ------------------- \n")
 		for _, node := range nodes {
 			if node.incount != 0 && node.outcount != 0 {
-				fmt.Printf("%s: %d %d\n", node.addr, node.incount, node.outcount)
+				fmt.Printf("%-16s   %-30s    %-4.1fk    %-4.1fk\n",
+					node.addr,
+					node.hostname,
+					float64(node.incount)/1000,
+					float64(node.outcount)/1000)
+
 			}
 		}
 
@@ -89,20 +96,25 @@ func main() {
 		var hostname string
 		if err != nil || len(names) == 0 {
 			hostname = "unknown"
-			fmt.Printf("%s - %s\n", addr, hostname)
+			if debug {
+				fmt.Printf("%s - %s\n", addr, hostname)
+			}
 		} else {
 			hostname = names[0]
-			fmt.Printf("%s - %s\n", addr, hostname)
+			if debug {
+				fmt.Printf("%s - %s\n", addr, hostname)
+			}
 		}
 		nodes = append(nodes,
 			node{IP: net.ParseIP(addr), addr: addr, hostname: hostname, incount: 0, outcount: 0})
 	}
 
-	reader := bufio.NewReader(os.Stdin)
-	fmt.Print("Press any key to continue...")
-	text, _ := reader.ReadString('\n')
-	fmt.Println(text)
-
+	if debug {
+		reader := bufio.NewReader(os.Stdin)
+		fmt.Print("Press any key to continue...")
+		text, _ := reader.ReadString('\n')
+		fmt.Println(text)
+	}
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 	for packet := range packetSource.Packets() {
 		//printPacketInfo(packet)
@@ -121,13 +133,13 @@ func analyzePacket(packet gopacket.Packet) {
 				if node.IP.Equal(ip.SrcIP) {
 					nodes[i].outcount += uint64(ip.Length)
 					if debug {
-						fmt.Printf("From %s to %s - len %d\n", ip.SrcIP, ip.DstIP, ip.Length)
+						fmt.Printf("From %s to %s - len %d\n", node.hostname, ip.DstIP, ip.Length)
 					}
 				}
 				if node.IP.Equal(ip.DstIP) {
 					nodes[i].incount += uint64(ip.Length)
 					if debug {
-						fmt.Printf("From %s to %s - len %d\n", ip.SrcIP, ip.DstIP, ip.Length)
+						fmt.Printf("From %s to %s - len %d\n", ip.SrcIP, node.hostname, ip.Length)
 					}
 				}
 			}
