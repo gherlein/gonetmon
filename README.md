@@ -52,7 +52,7 @@ sudo ./gonetmon <interface-name> <cidr to sniff>
 So a real-world example using the interface I configured above is:
 
 ```
-sudo ./gonetmon enp4s6 192.168.2.0/244
+sudo ./gonetmon enp4s6 192.168.2.0/24
 ```
 
 
