@@ -20,9 +20,8 @@ wanted to learn golang?
 
 To use this you will need to configure an interface for sniffing.  I
 did this by setting up my main network switch (a Netgear GS116E) to
-port mirror all ports to port 1, and wired port 1 to my monitoring
-port on an Ubuntu linux box.  Note:  I recommend you use Gigabit
-Ethernet.
+port mirror all ports to port 1, and wired port 1 to a second NIC on
+an Ubuntu linux box.  Note:  I recommend you use Gigabit Ethernet.
 
 I also configured the sniffing port to have no IP address.  My changes
 to the /etc/network/interfaces file added this:
