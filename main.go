@@ -1,18 +1,22 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 	"github.com/onsi/gocleanup"
 	"log"
-	//	"strings"
+	"math"
 	"net"
+	"os"
+	"strings"
 	"time"
 )
 
 type node struct {
+	hostname string
 	addr     string
 	IP       net.IP
 	incount  uint64
@@ -20,16 +24,46 @@ type node struct {
 }
 
 var (
-	device      string = "enp4s6"
-	snapshotLen int32  = 1024
-	promiscuous bool   = false
+	device      string = "eth0"
+	cidr        string = "192.168.1.1/24"
+	mask        net.IPMask
+	masklen     int
+	numhosts    int
+	baseaddr    string
+	snapshotLen int32 = 1024
+	promiscuous bool  = true
 	err         error
 	timeout     time.Duration = 30 * time.Second
 	handle      *pcap.Handle
 	nodes       []node
+	debug       bool = true
 )
 
 func main() {
+
+	if len(os.Args) == 2 {
+		device = os.Args[1]
+	}
+	if len(os.Args) == 3 {
+		device = os.Args[1]
+		cidr = os.Args[2]
+		ipv4Addr, ipv4Net, err := net.ParseCIDR(cidr)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		mask = ipv4Addr.DefaultMask()
+		masklen, _ = mask.Size()
+		numhosts = int(math.Pow(2, float64(32-masklen)))
+		baseaddr = strings.TrimSuffix(ipv4Addr.String(), ".0")
+
+		fmt.Println(ipv4Addr)
+		fmt.Println(ipv4Net)
+		fmt.Println(numhosts)
+		fmt.Println(baseaddr)
+		//		os.Exit(3)
+	}
+
 	// Open device
 	handle, err = pcap.OpenLive(device, snapshotLen, promiscuous, timeout)
 	if err != nil {
@@ -39,17 +73,35 @@ func main() {
 	gocleanup.Register(func() {
 		fmt.Printf("------------------- Summary Stats ------------------- \n")
 		for _, node := range nodes {
-			fmt.Printf("%s: %d %d\n", node.addr, node.incount, node.outcount)
+			if node.incount != 0 && node.outcount != 0 {
+				fmt.Printf("%s: %d %d\n", node.addr, node.incount, node.outcount)
+			}
 		}
 
 	})
 
-	nodes = append(nodes, node{addr: "192.168.2.11", incount: 0, outcount: 0})
-	nodes = append(nodes, node{addr: "192.168.2.70", incount: 0, outcount: 0})
-
-	for i, node := range nodes {
-		nodes[i].IP = net.ParseIP(node.addr)
+	for x := 0; x < numhosts; x++ {
+		if x == 0 {
+			continue
+		}
+		addr := fmt.Sprintf("%s.%d", baseaddr, x)
+		names, err := net.LookupAddr(addr)
+		var hostname string
+		if err != nil || len(names) == 0 {
+			hostname = "unknown"
+			fmt.Printf("%s - %s\n", addr, hostname)
+		} else {
+			hostname = names[0]
+			fmt.Printf("%s - %s\n", addr, hostname)
+		}
+		nodes = append(nodes,
+			node{IP: net.ParseIP(addr), addr: addr, hostname: hostname, incount: 0, outcount: 0})
 	}
+
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print("Press any key to continue...")
+	text, _ := reader.ReadString('\n')
+	fmt.Println(text)
 
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 	for packet := range packetSource.Packets() {
@@ -68,17 +120,20 @@ func analyzePacket(packet gopacket.Packet) {
 			if node.addr != "" {
 				if node.IP.Equal(ip.SrcIP) {
 					nodes[i].outcount += uint64(ip.Length)
-					fmt.Printf("From %s to %s - len %d\n", ip.SrcIP, ip.DstIP, ip.Length)
+					if debug {
+						fmt.Printf("From %s to %s - len %d\n", ip.SrcIP, ip.DstIP, ip.Length)
+					}
 				}
 				if node.IP.Equal(ip.DstIP) {
 					nodes[i].incount += uint64(ip.Length)
-					fmt.Printf("From %s to %s - len %d\n", ip.SrcIP, ip.DstIP, ip.Length)
+					if debug {
+						fmt.Printf("From %s to %s - len %d\n", ip.SrcIP, ip.DstIP, ip.Length)
+					}
 				}
 			}
 
 		}
 	}
-
 }
 
 func printPacketInfo(packet gopacket.Packet) {
