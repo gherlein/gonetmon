@@ -1,3 +1,8 @@
+/*
+*    Go Network Monitor - personal project
+*    Released under the MIT License:  https://gherlein.mit-license.org/
+ */
+
 package main
 
 import (

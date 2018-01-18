@@ -66,3 +66,6 @@ Every minute it will collect the total bytes in and out for each IP
 address and keep a running total.  It will dump a basic stats page
 every minute for hosts that had any traffic that minute.
 
+##  License
+
+This project is released under the MIT License.  Please see https://gherlein.mit-license.org
