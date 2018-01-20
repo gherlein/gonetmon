@@ -7,6 +7,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -29,12 +30,12 @@ type node struct {
 }
 
 var (
-	device      string = "eth0"
-	cidr        string = "192.168.1.1/24"
-	mask        net.IPMask
-	masklen     int
-	numhosts    int
-	baseaddr    string
+	device string = "eth0"
+	cidr   string = "192.168.1.1/24"
+	//	mask        net.IPMask
+	//	masklen     int
+	//	numhosts    int
+	//	baseaddr    string
 	snapshotLen int32 = 1024
 	promiscuous bool  = true
 	err         error
@@ -44,32 +45,93 @@ var (
 	debug       bool = false
 )
 
+func init() {
+	flag.StringVar(&device, "device", "eth0", "name of the network device to monitor")
+	flag.StringVar(&cidr, "cidr", "192.168.1.0/24", "CIDR of the network device to monitor")
+}
+
+func calcNetwork(d string, c string) (int, string, error) {
+	var (
+		mask     net.IPMask
+		masklen  int
+		numhosts int
+		baseaddr string
+	)
+	ipv4Addr, ipv4Net, err := net.ParseCIDR(c)
+	if err != nil {
+		log.Fatal(err)
+		return 0, "", err
+	}
+
+	mask = ipv4Addr.DefaultMask()
+	masklen, _ = mask.Size()
+	numhosts = int(math.Pow(2, float64(32-masklen)))
+	baseaddr = strings.TrimSuffix(ipv4Addr.String(), ".0")
+
+	if debug {
+		fmt.Println(ipv4Addr)
+		fmt.Println(ipv4Net)
+		fmt.Println(numhosts)
+		fmt.Println(baseaddr)
+		fmt.Println(c)
+	}
+	return numhosts, baseaddr, nil
+}
+
 func main() {
 
-	if len(os.Args) == 2 {
-		device = os.Args[1]
+	var (
+		numhosts int
+		baseaddr string
+	)
+
+	flag.Parse()
+	numhosts, baseaddr, err = calcNetwork(device, cidr)
+	fmt.Printf("Device: %s - CIDR: %s - numhosts: %d - baseaddr: %s\n", device, cidr, numhosts, baseaddr)
+
+	iface, err := net.InterfaceByName(device)
+	if err != nil {
+		fmt.Print(fmt.Errorf("localAddresses: %+v\n", err.Error()))
+		return
 	}
-	if len(os.Args) == 3 {
-		device = os.Args[1]
-		cidr = os.Args[2]
-		ipv4Addr, ipv4Net, err := net.ParseCIDR(cidr)
-		if err != nil {
-			log.Fatal(err)
+	addrs, err := iface.Addrs()
+	if err != nil {
+		fmt.Print(fmt.Errorf("localAddresses: %+v\n", err.Error()))
+	}
+	fmt.Printf("looking up addresses...\n")
+	for _, a := range addrs {
+		switch v := a.(type) {
+		case *net.IPAddr:
+			fmt.Printf("%v : %s (%s)\n", iface.Name, v, v.IP.DefaultMask())
 		}
 
-		mask = ipv4Addr.DefaultMask()
-		masklen, _ = mask.Size()
-		numhosts = int(math.Pow(2, float64(32-masklen)))
-		baseaddr = strings.TrimSuffix(ipv4Addr.String(), ".0")
-
-		if debug {
-			fmt.Println(ipv4Addr)
-			fmt.Println(ipv4Net)
-			fmt.Println(numhosts)
-			fmt.Println(baseaddr)
-		}
 	}
 
+	/*
+		if len(os.Args) == 2 {
+			device = os.Args[1]
+		}
+		if len(os.Args) == 3 {
+			device = os.Args[1]
+			cidr = os.Args[2]
+			ipv4Addr, ipv4Net, err := net.ParseCIDR(cidr)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			mask = ipv4Addr.DefaultMask()
+			masklen, _ = mask.Size()
+			numhosts = int(math.Pow(2, float64(32-masklen)))
+			baseaddr = strings.TrimSuffix(ipv4Addr.String(), ".0")
+
+			if debug {
+				fmt.Println(ipv4Addr)
+				fmt.Println(ipv4Net)
+				fmt.Println(numhosts)
+				fmt.Println(baseaddr)
+			}
+		}
+	*/
 	// Open device
 	handle, err = pcap.OpenLive(device, snapshotLen, promiscuous, timeout)
 	if err != nil {
