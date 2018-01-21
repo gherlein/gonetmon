@@ -46,13 +46,13 @@ Note that your network interface name will depend on your system.
 After building, run the tool like this:
 
 ```
-sudo ./gonetmon <interface-name> <cidr to sniff> 
+sudo ./gonetmon -device="<device name>" -cidr="<cidr>"
 ```
 
 So a real-world example using the interface I configured above is:
 
 ```
-sudo ./gonetmon enp4s6 192.168.2.0/24
+sudo ./gonetmon -device="enp4s6" -cidr="192.168.2.0/24"
 ```
 
 
