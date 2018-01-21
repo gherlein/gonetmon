@@ -42,7 +42,7 @@ var (
 	timeout     time.Duration = 30 * time.Second
 	handle      *pcap.Handle
 	nodes       []node
-	debug       bool = false
+	debug       bool = true
 )
 
 func init() {
@@ -89,49 +89,6 @@ func main() {
 	numhosts, baseaddr, err = calcNetwork(device, cidr)
 	fmt.Printf("Device: %s - CIDR: %s - numhosts: %d - baseaddr: %s\n", device, cidr, numhosts, baseaddr)
 
-	iface, err := net.InterfaceByName(device)
-	if err != nil {
-		fmt.Print(fmt.Errorf("localAddresses: %+v\n", err.Error()))
-		return
-	}
-	addrs, err := iface.Addrs()
-	if err != nil {
-		fmt.Print(fmt.Errorf("localAddresses: %+v\n", err.Error()))
-	}
-	fmt.Printf("looking up addresses...\n")
-	for _, a := range addrs {
-		switch v := a.(type) {
-		case *net.IPAddr:
-			fmt.Printf("%v : %s (%s)\n", iface.Name, v, v.IP.DefaultMask())
-		}
-
-	}
-
-	/*
-		if len(os.Args) == 2 {
-			device = os.Args[1]
-		}
-		if len(os.Args) == 3 {
-			device = os.Args[1]
-			cidr = os.Args[2]
-			ipv4Addr, ipv4Net, err := net.ParseCIDR(cidr)
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			mask = ipv4Addr.DefaultMask()
-			masklen, _ = mask.Size()
-			numhosts = int(math.Pow(2, float64(32-masklen)))
-			baseaddr = strings.TrimSuffix(ipv4Addr.String(), ".0")
-
-			if debug {
-				fmt.Println(ipv4Addr)
-				fmt.Println(ipv4Net)
-				fmt.Println(numhosts)
-				fmt.Println(baseaddr)
-			}
-		}
-	*/
 	// Open device
 	handle, err = pcap.OpenLive(device, snapshotLen, promiscuous, timeout)
 	if err != nil {
