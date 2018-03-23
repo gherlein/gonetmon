@@ -4,10 +4,10 @@ install:
 	service gonetmon start
 
 stop:
-	service gonetmon stop
+	sudo service gonetmon stop
 
 start:
-	service gonetmon start
+	sudo service gonetmon start
 
 restart:
-	service gonetmon restart
+	sudo service gonetmon restart
