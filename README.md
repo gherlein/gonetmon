@@ -147,3 +147,9 @@ This query pulls the rates for devices whose names start with "alexa" OR "roku" 
 
 You can build your own queries based on your own naming convention.
 
+# Useful Links
+
+[Creating Systemd Service Files](https://www.devdungeon.com/content/creating-systemd-service-files)
+[Integration of a Go service with systemd: readiness & liveness](https://vincent.bernat.im/en/blog/2017-systemd-golang)
+[Integration of a Go service with systemd: socket activation](https://vincent.bernat.im/en/blog/2018-systemd-golang-socket-activation)
+
