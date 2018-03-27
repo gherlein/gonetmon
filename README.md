@@ -122,7 +122,7 @@ The key parameter gonetmon exports is "node_bytes_total" and they are tagged by 
 
 ```
 rate(node_bytes_total [5m])
-``
+```
 
 This replies with rates across a 5 minute period derived from the underlying time-series data.
 
