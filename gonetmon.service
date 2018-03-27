@@ -1,0 +1,11 @@
+[Unit]
+Description=GoNetMon Host Network Use Exporter
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/gonetmon
+WatchdogSec=30s
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

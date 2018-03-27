@@ -15,6 +15,7 @@ import (
 	"github.com/onsi/gocleanup"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/spf13/viper"
 	"log"
 	"math"
 	"net"
@@ -33,6 +34,7 @@ type node struct {
 }
 
 var (
+	logfile     string = "/var/log/gonetmon.log"
 	device      string = ""
 	cidr        string = ""
 	snapshotLen int32  = 1024
@@ -42,6 +44,7 @@ var (
 	handle      *pcap.Handle
 	nodes       []node
 	debug       bool = false
+	debug2      bool = false
 	netBytes         = prometheus.NewCounter(prometheus.CounterOpts{
 		Name: "network_bytes_total",
 		Help: "Number of bytes seen on the network.",
@@ -56,8 +59,21 @@ var (
 )
 
 func init() {
-	flag.StringVar(&device, "device", "", "name of the network device to monitor")
-	flag.StringVar(&cidr, "cidr", "", "CIDR of the network device to monitor")
+
+	viper.SetConfigName("gonetmon") // no need to include file extension
+	viper.AddConfigPath(".")
+	viper.AddConfigPath("/etc/")
+
+	err := viper.ReadInConfig()
+	if err != nil {
+		fmt.Println("Config file not found, looking at command line")
+		flag.StringVar(&device, "device", "", "name of the network device to monitor")
+		flag.StringVar(&cidr, "cidr", "", "CIDR of the network device to monitor")
+	} else {
+		device = viper.GetString("network.device")
+		cidr = viper.GetString("network.cidr")
+	}
+
 	prometheus.MustRegister(netBytes)
 	prometheus.MustRegister(nodeBytes)
 }
@@ -97,13 +113,31 @@ func main() {
 		baseaddr string
 	)
 
+	//create your file with desired read/write permissions
+	f, err := os.OpenFile(logfile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer f.Close()
+	log.SetOutput(f)
+
 	flag.Parse()
 	if device == "" || cidr == "" {
 		fmt.Printf("device name and/or cidr not specified\n")
 		os.Exit(3)
+	} else {
+		log.Printf("network: %s - cidr is %s", device, cidr)
 	}
+
 	numhosts, baseaddr, err = calcNetwork(device, cidr)
-	fmt.Printf("Device: %s - CIDR: %s - numhosts: %d - baseaddr: %s\n", device, cidr, numhosts, baseaddr)
+
+	if debug {
+		fmt.Printf("Startup - Device: %s - CIDR: %s - numhosts: %d - baseaddr: %s\n",
+			device,
+			cidr,
+			numhosts,
+			baseaddr)
+	}
 
 	// Open device
 	handle, err = pcap.OpenLive(device, snapshotLen, promiscuous, timeout)
@@ -142,7 +176,7 @@ func main() {
 			})
 	}
 
-	if debug {
+	if debug2 {
 		reader := bufio.NewReader(os.Stdin)
 		fmt.Print("Press any key to continue...")
 		text, _ := reader.ReadString('\n')
@@ -152,9 +186,13 @@ func main() {
 	ticker := time.NewTicker(time.Minute)
 	go func() {
 		for t := range ticker.C {
-			fmt.Println("Time:", t)
-			printStats()
+			_ = t
+			if debug {
+				printStats()
+			}
+			logStats()
 			clearStats()
+
 		}
 	}()
 
@@ -200,10 +238,22 @@ func analyzePacket(packet gopacket.Packet) {
 }
 
 func printStats() {
-	fmt.Printf("------------------- Summary Stats ------------------- \n")
+	log.Printf("------------------- Summary Stats ------------------- \n")
 	for _, node := range nodes {
 		if node.incount != 0 && node.outcount != 0 {
-			fmt.Printf("%-16s   %-30s    %-10.1fk    %-10.1fk\n",
+			log.Printf("%-16s   %-30s    %-10.1fk    %-10.1fk\n",
+				node.addr,
+				node.hostname,
+				float64(node.incount)/1000,
+				float64(node.outcount)/1000)
+		}
+	}
+}
+
+func logStats() {
+	for _, node := range nodes {
+		if node.incount != 0 && node.outcount != 0 {
+			log.Printf("%-16s   %-30s    %-10.1fk    %-10.1fk\n",
 				node.addr,
 				node.hostname,
 				float64(node.incount)/1000,
