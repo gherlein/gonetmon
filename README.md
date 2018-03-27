@@ -1,22 +1,21 @@
 # GoNetMon
 
+![Grafana Image](/images/grafana.png)
+
 ## What?
 
-This is a tool I want for my own home network.  Eventually it will
-have a waterfall display GUI served to a browser, but I'm
-incrementally adding things as I go. 
-
-Right now it ticks at 1 minute intervals and dumps a byte count of the
-active hosts on that network for that minute.
+This is a tool I want for my own home network.  It's a systemd-controlled daemon that collects per-host network use and exports it to Prometheus, which in turn is graphed on Grafana.
 
 ## Why?
 
 I am learning golang and wanted someting real to build.  Plus, I
 really want to see what is putting traffic on my network.  Yes, I
 could have just used an off the shelf thing, but did I mention I
-wanted to learn golang?
+wanted to learn golang/Prometheus/Grafana?
 
 ## Setup
+
+### Configure a Network Interface for Sniffing
 
 To use this you will need to configure an interface for sniffing.  I
 did this by setting up my main network switch (a Netgear GS116E) to
@@ -40,23 +39,47 @@ post-up ethtool -K enp4s6 lro off
 
 Note that your network interface name will depend on your system.
 
+### Seeing All the Network Traffic
 
-## Usage
+Sniffing a port on a switch will not show you all the traffic.  That's just not how switches work.  To get visibility into all the traffic I use a switch that supports "port mirroring."  I like the Netgear GS108E (and relatives) even though it needs a Winblows app to configure them until you set up their local web page.
 
-After building, run the tool like this:
 
-```
-sudo ./gonetmon -device="<device name>" -cidr="<cidr>"
-```
+### Gonetmon Configuration
 
-So a real-world example using the interface I configured above is:
+Edit the gonetmon.toml file to reflect your network interface and CIDR:
 
 ```
-sudo ./gonetmon -device="enp4s6" -cidr="192.168.2.0/24"
+[network]
+device = "enp4s6"
+cidr ="192.168.2.0/24"
+```
+Use the network port you configured for sniffing and the CIDR for your own network, of course.
+
+## Build
+
+Use the handy makefile:
+
+```
+make 
+```
+You almost certainly are going to have to install the dependencies.
+
+
+### Gonetmon Installation
+
+Use the handy makefile:
+
+```
+make install 
 ```
 
+This will install the systemd files and actually enable and start it as a daemon.
 
-## Behavior
+### What if I don't have Systemd?
+
+Sorry.  I'm on Ubuntu that has it and if I get time I'll do an installer for the older method.  Don't hold your breath though.  Pull Requests welcome!
+
+### Gonetmon Behavior
 
 The code will use the CIDR you pass in to find the number of POSSIBLE
 hosts on the network and will watch them all as it processes packets.
@@ -66,6 +89,6 @@ Every minute it will collect the total bytes in and out for each IP
 address and keep a running total.  It will dump a basic stats page
 every minute for hosts that had any traffic that minute.
 
-##  License
+##  Gonetmon License
 
 This project is released under the MIT License.  Please see https://gherlein.mit-license.org
