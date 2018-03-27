@@ -1,4 +1,8 @@
+build:
+	go build
+
 install:
+	sudo systemctl stop gonetmon
 	sudo cp ./gonetmon /usr/local/bin/
 	sudo cp ./gonetmon.toml /etc/
 	sudo cp ./gonetmon.service /etc/systemd/system
@@ -15,3 +19,6 @@ start:
 
 restart:
 	sudo service gonetmon restart
+
+clean:
+	rm ./gonetmon

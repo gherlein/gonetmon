@@ -35,6 +35,7 @@ type node struct {
 
 var (
 	logfile     string = "/var/log/gonetmon.log"
+	f           *os.File
 	device      string = ""
 	cidr        string = ""
 	snapshotLen int32  = 1024
@@ -118,15 +119,19 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer f.Close()
+
+	defer func() {
+		log.Println("exiting")
+		f.Sync()
+		f.Close()
+	}()
+
 	log.SetOutput(f)
 
 	flag.Parse()
 	if device == "" || cidr == "" {
 		fmt.Printf("device name and/or cidr not specified\n")
 		os.Exit(3)
-	} else {
-		log.Printf("network: %s - cidr is %s", device, cidr)
 	}
 
 	numhosts, baseaddr, err = calcNetwork(device, cidr)
@@ -138,6 +143,12 @@ func main() {
 			numhosts,
 			baseaddr)
 	}
+
+	log.Printf("Startup - Device: %s - CIDR: %s - numhosts: %d - baseaddr: %s\n",
+		device,
+		cidr,
+		numhosts,
+		baseaddr)
 
 	// Open device
 	handle, err = pcap.OpenLive(device, snapshotLen, promiscuous, timeout)
@@ -186,12 +197,12 @@ func main() {
 	ticker := time.NewTicker(time.Minute)
 	go func() {
 		for t := range ticker.C {
+			logStats()
+			clearStats()
 			_ = t
 			if debug {
 				printStats()
 			}
-			logStats()
-			clearStats()
 
 		}
 	}()
@@ -248,6 +259,7 @@ func printStats() {
 				float64(node.outcount)/1000)
 		}
 	}
+	f.Sync()
 }
 
 func logStats() {
@@ -260,6 +272,7 @@ func logStats() {
 				float64(node.outcount)/1000)
 		}
 	}
+	f.Sync()
 }
 
 func clearStats() {
