@@ -9,6 +9,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"github.com/coreos/go-systemd/daemon"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
@@ -212,6 +213,21 @@ func main() {
 		log.Fatal(http.ListenAndServe(":8080", nil))
 	}()
 
+	daemon.SdNotify(false, "READY=1")
+
+	ticker2 := time.NewTicker(time.Second * 15)
+	go func() {
+		for t := range ticker2.C {
+			_ = t
+			_, err := http.Get("http://localhost:8080/metrics")
+			if err != nil {
+				log.Println("internal health check failed")
+			} else {
+				daemon.SdNotify(false, "WATCHDOG=1")
+			}
+		}
+	}()
+
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 	for packet := range packetSource.Packets() {
 		//printPacketInfo(packet)
@@ -263,6 +279,7 @@ func printStats() {
 }
 
 func logStats() {
+	log.Printf("------------------- Summary Stats ------------------- \n")
 	for _, node := range nodes {
 		if node.incount != 0 && node.outcount != 0 {
 			log.Printf("%-16s   %-30s    %-10.1fk    %-10.1fk\n",

@@ -1,8 +1,11 @@
 [Unit]
 Description=GoNetMon Host Network Use Exporter
+Wants=network.target
+After=network.target
+
 
 [Service]
-Type=simple
+Type=notify
 ExecStart=/usr/local/bin/gonetmon
 WatchdogSec=30s
 Restart=on-failure

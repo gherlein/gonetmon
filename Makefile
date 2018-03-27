@@ -21,4 +21,5 @@ restart:
 	sudo service gonetmon restart
 
 clean:
-	rm ./gonetmon
+	-rm -f ./gonetmon
+	-rm -f *~
