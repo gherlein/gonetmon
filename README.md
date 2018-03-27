@@ -43,6 +43,10 @@ Note that your network interface name will depend on your system.
 
 Sniffing a port on a switch will not show you all the traffic.  That's just not how switches work.  To get visibility into all the traffic I use a switch that supports "port mirroring."  I like the Netgear GS108E (and relatives) even though it needs a Winblows app to configure them until you set up their local web page.
 
+### Reverse DNS
+
+Gonetmon will use reverse DNS to get human-readable names for each IP address in the CIDR block that it monitors.  If you don't configure that you will get device names that are IP addresses, which are not anywhere near as useful.  Configuring your DNS is outside the scope of this README.  For the lazy, here's a [link to some instructions](https://www.tecmint.com/install-dhcp-server-in-ubuntu-debian/).
+
 
 ### Gonetmon Configuration
 
@@ -89,6 +93,53 @@ Every minute it will collect the total bytes in and out for each IP
 address and keep a running total.  It will dump a basic stats page
 every minute for hosts that had any traffic that minute.
 
-##  Gonetmon License
+###  Gonetmon License
 
 This project is released under the MIT License.  Please see https://gherlein.mit-license.org
+
+# Prometheus
+
+## Configuration
+Add a job to /etc/prometheus/prometheus.yaml:
+
+```
+scrape_configs:
+  # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
+  <...snip...>
+
+  - job_name: 'network_stats'
+    static_configs:
+      - targets: ['localhost:8080']
+
+  <...snip...>
+```
+
+TODO:  need to move the scrape port into the gonetmon configuration and not be hard coded.
+
+## Queries
+
+The key parameter gonetmon exports is "node_bytes_total" and they are tagged by "device" which is poulated by reverse DNS lookup in gonetmon.  Here's a query to see all the traffic measured:
+
+```
+rate(node_bytes_total [5m])
+``
+
+This replies with rates across a 5 minute period derived from the underlying time-series data.
+
+
+# Grafana
+
+It's up to you to build your own dashboards, but to save you time I wanted to show a few graph queries that are useful in this context.
+
+## Matching Hostnames
+
+I name devices on my network with a naming convention.  For example, all my Amazon Alexa device hostnames start with the word "alexa" - examples:  alexalivingroom, alexakitchen, etc.  My Roku player is likewise named with roku as the start of it's hostname.  We use Alexa devices a lot to listen to music.  This let's me create a graph on my dashboard that displays all media player traffic using using this query:
+
+```
+rate(node_bytes_total {device=~"alexa.*|roku.*" } [5m] )
+```
+
+This query pulls the rates for devices whose names start with "alexa" OR "roku" and plots them.
+
+You can build your own queries based on your own naming convention.
+
