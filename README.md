@@ -56,8 +56,12 @@ Edit the gonetmon.toml file to reflect your network interface and CIDR:
 [network]
 device = "enp4s6"
 cidr ="192.168.2.0/24"
+
+
+[exporter]
+port ="8080"
 ```
-Use the network port you configured for sniffing and the CIDR for your own network, of course.
+Use the network port you configured for sniffing and the CIDR for your own network, of course.  You will need the port number specified here when you configure Prometheus (see below).
 
 ## Build
 
@@ -95,7 +99,7 @@ every minute for hosts that had any traffic that minute.
 
 ###  Gonetmon License
 
-This project is released under the MIT License.  Please see https://gherlein.mit-license.org
+This project is released under the MIT License.  Please see details [here] (https://gherlein.mit-license.org).
 
 # Prometheus
 
@@ -114,7 +118,7 @@ scrape_configs:
   <...snip...>
 ```
 
-TODO:  need to move the scrape port into the gonetmon configuration and not be hard coded.
+The port number specified in the target must be the same port number called out above in the gonetmon "port" configuration.
 
 ## Queries
 

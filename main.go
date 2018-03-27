@@ -35,10 +35,12 @@ type node struct {
 }
 
 var (
+	cli         bool   = true
 	logfile     string = "/var/log/gonetmon.log"
 	f           *os.File
 	device      string = ""
 	cidr        string = ""
+	port        string = ""
 	snapshotLen int32  = 1024
 	promiscuous bool   = true
 	err         error
@@ -62,20 +64,27 @@ var (
 
 func init() {
 
-	viper.SetConfigName("gonetmon") // no need to include file extension
-	viper.AddConfigPath(".")
-	viper.AddConfigPath("/etc/")
+	flag.StringVar(&device, "device", "", "name of the network device to monitor")
+	flag.StringVar(&cidr, "cidr", "", "CIDR of the network device to monitor")
+	flag.StringVar(&port, "port", "", "port on localhost that metrics will be exported on")
+	flag.Parse()
 
-	err := viper.ReadInConfig()
-	if err != nil {
-		fmt.Println("Config file not found, looking at command line")
-		flag.StringVar(&device, "device", "", "name of the network device to monitor")
-		flag.StringVar(&cidr, "cidr", "", "CIDR of the network device to monitor")
-	} else {
-		device = viper.GetString("network.device")
-		cidr = viper.GetString("network.cidr")
+	// if there were no command line params, read from the config file
+	if device == "" || cidr == "" || port == "" {
+		cli = false
+		viper.SetConfigName("gonetmon") // no need to include file extension
+		viper.AddConfigPath(".")
+		viper.AddConfigPath("/etc/")
+
+		err := viper.ReadInConfig()
+		if err != nil {
+
+		} else {
+			device = viper.GetString("network.device")
+			cidr = viper.GetString("network.cidr")
+			port = viper.GetString("exporter.port")
+		}
 	}
-
 	prometheus.MustRegister(netBytes)
 	prometheus.MustRegister(nodeBytes)
 }
@@ -115,41 +124,32 @@ func main() {
 		baseaddr string
 	)
 
-	//create your file with desired read/write permissions
-	f, err := os.OpenFile(logfile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	defer func() {
-		log.Println("exiting")
-		f.Sync()
-		f.Close()
-	}()
-
-	log.SetOutput(f)
-
-	flag.Parse()
-	if device == "" || cidr == "" {
-		fmt.Printf("device name and/or cidr not specified\n")
+	if device == "" || cidr == "" || port == "" {
+		fmt.Printf("device name and/or cidr and/or port not specified\n")
 		os.Exit(3)
+	}
+	if cli == false {
+		//create your file with desired read/write permissions
+		f, err := os.OpenFile(logfile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.SetOutput(f)
+		defer func() {
+			log.Println("exiting")
+			f.Sync()
+			f.Close()
+		}()
 	}
 
 	numhosts, baseaddr, err = calcNetwork(device, cidr)
 
-	if debug {
-		fmt.Printf("Startup - Device: %s - CIDR: %s - numhosts: %d - baseaddr: %s\n",
-			device,
-			cidr,
-			numhosts,
-			baseaddr)
-	}
-
-	log.Printf("Startup - Device: %s - CIDR: %s - numhosts: %d - baseaddr: %s\n",
+	log.Printf("Startup - Device: %s - CIDR: %s - numhosts: %d - baseaddr: %s - port %s\n",
 		device,
 		cidr,
 		numhosts,
-		baseaddr)
+		baseaddr,
+		port)
 
 	// Open device
 	handle, err = pcap.OpenLive(device, snapshotLen, promiscuous, timeout)
@@ -210,7 +210,8 @@ func main() {
 
 	go func() {
 		http.Handle("/metrics", promhttp.Handler())
-		log.Fatal(http.ListenAndServe(":8080", nil))
+		url := fmt.Sprintf(":%s", port)
+		log.Fatal(http.ListenAndServe(url, nil))
 	}()
 
 	daemon.SdNotify(false, "READY=1")
