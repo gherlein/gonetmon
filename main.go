@@ -168,7 +168,7 @@ func main() {
 		names, err := net.LookupAddr(addr)
 		var hostname string
 		if err != nil || len(names) == 0 {
-			hostname = "unknown"
+			hostname = fmt.Sprintf("unknown-%s", addr)
 			if debug {
 				fmt.Printf("%s - %s\n", addr, hostname)
 			}
