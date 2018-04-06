@@ -4,14 +4,7 @@ build: dependencies ./gonetmon
 	go build
 
 dependencies:
-	go get github.com/coreos/go-systemd/daemon
-	go get github.com/google/gopacket
-	go get github.com/google/gopacket/layers
-	go get github.com/google/gopacket/pcap
-	go get github.com/onsi/gocleanup
-	go get github.com/prometheus/client_golang/prometheus
-	go get github.com/prometheus/client_golang/prometheus/promhttp
-	go get github.com/spf13/viper
+	go get ./...
 
 install: ./gonetmon
 	sudo systemctl stop gonetmon

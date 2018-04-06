@@ -97,10 +97,6 @@ Every minute it will collect the total bytes in and out for each IP
 address and keep a running total.  It will dump a basic stats page
 every minute for hosts that had any traffic that minute.
 
-###  Gonetmon License
-
-This project is released under the MIT License.  Please see details [here] (https://gherlein.mit-license.org).
-
 # Prometheus
 
 ## Configuration
@@ -153,3 +149,6 @@ You can build your own queries based on your own naming convention.
 [Integration of a Go service with systemd: readiness & liveness](https://vincent.bernat.im/en/blog/2017-systemd-golang)
 [Integration of a Go service with systemd: socket activation](https://vincent.bernat.im/en/blog/2018-systemd-golang-socket-activation)
 
+# Gonetmon License
+
+This project is released under the MIT License.  Please see details [here] (https://gherlein.mit-license.org).
