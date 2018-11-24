@@ -1,30 +1,30 @@
-./gonetmon: build
+NAME   := gonetmon
 
-build: dependencies ./gonetmon
+
+all: 
 	go build
 
 dependencies:
 	go get ./...
 
-install: ./gonetmon
-	sudo systemctl stop gonetmon
-	sudo cp ./gonetmon /usr/local/bin/
-	sudo cp ./gonetmon.toml /etc/
-	sudo cp ./gonetmon.service /etc/systemd/system
+install: ${NAME}
+	sudo systemctl stop ${NAME}
+	sudo cp ${NAME} /usr/local/bin/
+	sudo cp ${NAME}.toml /etc/
+	sudo cp ${NAME}.service /etc/systemd/system
 	sudo systemctl daemon-reload
-	sudo systemctl enable gonetmon
-	sudo systemctl start gonetmon
-
+	sudo systemctl enable ${NAME}
+	sudo systemctl start ${NAME}
 
 stop:
-	sudo service gonetmon stop
+	sudo service ${NAME} stop
 
 start:
-	sudo service gonetmon start
+	sudo service ${NAME} start
 
 restart:
-	sudo service gonetmon restart
+	sudo service ${NAME} restart
 
 clean:
-	-rm -f ./gonetmon
+	-rm -f ${NAME}
 	-rm -f *~
