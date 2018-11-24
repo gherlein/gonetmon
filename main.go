@@ -220,7 +220,7 @@ func main() {
 	go func() {
 		for t := range ticker2.C {
 			_ = t
-			url := fmt.Sprintf("http://localhost:%s", port)
+			url := fmt.Sprintf("http://localhost:%s/metrics", port)
 			_, err := http.Get(url)
 			if err != nil {
 				log.Println("internal health check failed")
