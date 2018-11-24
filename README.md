@@ -118,7 +118,7 @@ The port number specified in the target must be the same port number called out 
 
 ## Queries
 
-The key parameter gonetmon exports is "node_bytes_total" and they are tagged by "device" which is poulated by reverse DNS lookup in gonetmon.  Here's a query to see all the traffic measured (via http://<prometheus-host>:9090/graph )
+The key parameter gonetmon exports is "node_bytes_total" and they are tagged by "device" which is poulated by reverse DNS lookup in gonetmon.  Here's a query to see all the traffic measured (via http://prometheus-host:9090/graph )
 
 ```
 rate(node_bytes_total [5m])
