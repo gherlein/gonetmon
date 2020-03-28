@@ -6,6 +6,7 @@ all:
 
 dependencies:
 	go get ./...
+	sudo apt-get install libpcap-dev
 
 install: ${NAME}
 	sudo systemctl stop ${NAME}

@@ -70,7 +70,11 @@ Use the handy makefile:
 ```
 make 
 ```
-You almost certainly are going to have to install the dependencies.
+
+You almost certainly are going to have to install the dependencies:
+```
+make dependencies
+```
 
 
 ### Gonetmon Installation
