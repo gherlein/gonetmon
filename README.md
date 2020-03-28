@@ -155,4 +155,4 @@ You can build your own queries based on your own naming convention.
 
 # Gonetmon License
 
-This project is released under the MIT License.  Please see details [here] (https://gherlein.mit-license.org).
+This project is released under the [MIT License](https://gherlein.mit-license.org).
